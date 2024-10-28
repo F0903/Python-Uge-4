@@ -1,13 +1,29 @@
 from collections.abc import Iterable
+from typing import override
 from .token import CsvTokenType, CsvToken, CsvValueToken
+from .error import CsvError
+
+
+class CsvLexerError(CsvError):
+    def __init__(self, message: str, position: int) -> None:
+        super().__init__(message)
+        self.position = position
+
+    @override
+    def get_printable_message(self) -> str:
+        return f"{self.message}\n\tat position {self.position}"
 
 
 class CsvLexer:
-    def __init__(self, input: Iterable[str]) -> None:
+    def __init__(
+        self, input: Iterable[str], allow_multiline_strings: bool = False
+    ) -> None:
         self.input = input
         self.line_num = 0
         self.line = ""
         self.index = 0
+        self.allow_multiline_strings = allow_multiline_strings
+
         self.stop_requested = False
 
     def _advance_line(self):
@@ -30,11 +46,25 @@ class CsvLexer:
     def _create_value_token(self) -> CsvValueToken:
         start_index = self.index
         str_buf = ""
+        in_string = False
         while True:
             char = self._get_current_char()
+            if char == '"':
+                if in_string:
+                    self._advance_char()
+                    break
+                in_string = True
+                self._advance_char()
+                continue
 
             # Don't handle these cases here.
-            if char == "," or char == "\n" or char == None:
+            if char == "\n":
+                if in_string and not self.allow_multiline_strings:
+                    raise CsvLexerError("Unterminated string!", start_index)
+                break
+
+            # Don't handle these cases here.
+            if not in_string and (char == "," or char == None):
                 break
 
             str_buf += char

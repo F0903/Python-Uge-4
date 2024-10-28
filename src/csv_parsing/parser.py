@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import cast, TextIO
+from typing import cast, TextIO, override
 from .token import CsvToken, CsvValueToken, CsvTokenType
 from .error import CsvError
 from .row import CsvRow
@@ -10,7 +10,12 @@ from .bad_line_mode import BadLineMode
 
 class CsvParserError(CsvError):
     def __init__(self, message: str, token: CsvToken) -> None:
-        super().__init__(message, token)
+        super().__init__(message)
+        self.token = token
+
+    @override
+    def get_printable_message(self) -> str:
+        return f"{self.message}\n\tat line {self.token.line_num}, column {self.token.char_index}"
 
 
 class CsvHeader:
@@ -30,11 +35,12 @@ class CsvParser:
         lines: Iterable[str],
         bad_line_mode: BadLineMode,
         print_error_to: TextIO | None,
+        allow_multiline_strings: bool = False,
     ) -> None:
         self.error_state = False
         self.had_error = False
 
-        self.input = CsvLexer(lines).lex()
+        self.input = CsvLexer(lines, allow_multiline_strings).lex()
         self.bad_line_mode = bad_line_mode
         self.print_to_file = print_error_to
 
