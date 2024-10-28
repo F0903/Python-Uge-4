@@ -65,11 +65,8 @@ class CsvTypeValidator:
     def had_errors(self) -> bool:
         return self.had_error
 
-    def validate(self, rows: Iterable[CsvRow | None]) -> Iterable[CsvRow | None]:
+    def validate(self, rows: Iterable[CsvRow]) -> Iterable[CsvRow]:
         for row in rows:
-            if row == None:
-                yield None  # We reached the end.
-
             values = row.get_all_values()
             # Make sure ALL values pass the tests.
             if all(map(self._check_value, values)):
