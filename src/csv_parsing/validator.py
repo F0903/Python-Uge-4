@@ -4,7 +4,7 @@ from typing import TextIO
 from .row import CsvRow
 from .value import CsvValue
 from .error import CsvError
-from .token import CsvToken
+from .lexing.token import CsvToken
 from .bad_line_mode import BadLineMode
 
 

@@ -1,4 +1,4 @@
-from .parser import CsvRow
+from .parsing.parser import CsvRow
 
 
 def row_to_dict(row: CsvRow) -> dict[str, str]:

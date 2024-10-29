@@ -1,17 +1,7 @@
 from collections.abc import Iterable
-from typing import override
+
+from .lexer_error import CsvLexerError
 from .token import CsvTokenType, CsvToken, CsvValueToken
-from .error import CsvError
-
-
-class CsvLexerError(CsvError):
-    def __init__(self, message: str, position: int) -> None:
-        super().__init__(message)
-        self.position = position
-
-    @override
-    def get_printable_message(self) -> str:
-        return f"{self.message}\n\tat position {self.position}"
 
 
 class CsvLexer:
@@ -60,7 +50,10 @@ class CsvLexer:
             # Don't handle these cases here.
             if char == "\n":
                 if in_string and not self.allow_multiline_strings:
-                    raise CsvLexerError("Unterminated string!", start_index)
+                    raise CsvLexerError(
+                        "Unterminated string! Did you mean to turn enable mutli-line strings?",
+                        start_index,
+                    )
                 break
 
             # Don't handle these cases here.

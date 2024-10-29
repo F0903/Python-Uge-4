@@ -1,4 +1,4 @@
-from .token import CsvValueToken
+from .lexing.token import CsvValueToken
 
 
 class CsvValue:

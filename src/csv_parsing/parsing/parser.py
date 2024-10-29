@@ -1,35 +1,17 @@
-from collections.abc import Iterable
-from typing import Self, cast, TextIO, override
-from .token import CsvToken, CsvValueToken, CsvTokenType
-from .error import CsvError
-from .row import CsvRow
-from .value import CsvValue
-from .lexer import CsvLexer
-from .bad_line_mode import BadLineMode
+from collections.abc import Iterable, Generator
+from typing import Self, cast, TextIO
+from ..lexing.token import CsvToken, CsvValueToken, CsvTokenType
+from ..error import CsvError
+from ..row import CsvRow
+from ..value import CsvValue
+from ..lexing.lexer import CsvLexer
+from ..bad_line_mode import BadLineMode
+from .csv_header import CsvHeader
+from .parser_error import CsvParserError
+from .base_parser import BaseCsvParser
 
 
-class CsvParserError(CsvError):
-    def __init__(self, message: str, token: CsvToken) -> None:
-        super().__init__(message)
-        self.token = token
-
-    @override
-    def get_printable_message(self) -> str:
-        return f"{self.message}\n\tat line {self.token.line_num}, column {self.token.char_index}"
-
-
-class CsvHeader:
-    def __init__(self, column_decls: list[str]) -> None:
-        self.column_decls = column_decls
-
-    def lookup_column_type(self, comma_index: int) -> str:
-        return self.column_decls[comma_index]
-
-    def get_column_count(self) -> int:
-        return len(self.column_decls)
-
-
-class CsvParser:
+class CsvParser(BaseCsvParser):
     def __init__(
         self,
         lines: TextIO | Iterable[str],
@@ -47,6 +29,8 @@ class CsvParser:
 
         self._line_num = 0
         self._current_token = None
+
+        self._advance()  # Priming the pump :)
         if parse_header:
             self._parse_header()
 
@@ -70,7 +54,6 @@ class CsvParser:
         return new
 
     def _parse_header(self):
-        self._advance()  # Priming the pump :)
         comma_index = 0
         header_column_decls = []
         while True:
@@ -79,12 +62,15 @@ class CsvParser:
                 case CsvTokenType.NEWLINE:
                     self._advance_line()
                     break  # The 'header' is only the first line, so we are done
+
                 case CsvTokenType.COMMA:
                     comma_index += 1
+
                 case CsvTokenType.VALUE:
                     # At this point we know that 'token' is a CsvValueToken
                     value_token = cast(CsvValueToken, token)
                     header_column_decls.append(value_token.value)
+
             self._advance()
 
         self._header = CsvHeader(header_column_decls)
@@ -149,8 +135,8 @@ class CsvParser:
     def had_errors(self) -> bool:
         return self._had_error
 
-    def parse(self) -> Iterable[CsvRow]:
-        # We have already 'primed the pump' in _parse_header() so no need to here
+    def parse(self) -> Generator[CsvRow]:
+        # We have already 'primed the pump' in the constructor, so no need to advance here.
 
         eof = False
 
