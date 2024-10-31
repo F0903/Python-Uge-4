@@ -55,9 +55,11 @@ class MultiProcessCsvParser(BaseCsvParser):
         chunks = batched(self._lines, self._chunk_size)
 
         with mp.Pool(cpus) as pool:
+
             for val in pool.map(self._parse_chunk, chunks):
                 yield val
 
+    # NOTE: THIS DOES NOT WORK AS EXPECTED, WILL ONLY RETURN VALUES WHEN THE WHOLE FILE HAS BEEN PARSED
     def parse(self) -> Generator[CsvRow]:
         # This is a little hacky, but we construct the first parser here,
         # then since the constructor parses the header, we get the header
