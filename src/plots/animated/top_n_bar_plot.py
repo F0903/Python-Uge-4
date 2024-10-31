@@ -20,7 +20,7 @@ class TopNBarPlot(AnimatedPlot):
 
         self.SECONDARY_COLOR = "#666666"
         self.X_LIMIT_MARGIN_PERCENT = 0.1
-        self.BAR_TEXT_MARGIN = 50
+        self.BAR_TEXT_MARGIN = 10
 
         self._title = ""
 
@@ -135,6 +135,17 @@ class TopNBarPlot(AnimatedPlot):
             if j >= index:
                 return key, value
 
+    def _calc_rough_text_width(self, text: str, factor: int = 1) -> int:
+        # These are just pure magic numbers lol
+        ASCII_VALUE = 12
+        NON_ASCII_VALUE = 18
+        total = 0
+
+        for char in text:
+            total += ASCII_VALUE if char.isascii() else NON_ASCII_VALUE
+
+        return total * factor
+
     def _render_bar_text(self, bar_index: int):
         name, value = self._get_key_value_at_index(bar_index)
 
@@ -142,7 +153,10 @@ class TopNBarPlot(AnimatedPlot):
 
         bar_text_margin = self.BAR_TEXT_MARGIN * scaling_factor
 
-        put_text_right = value < 0.1 * self._highest_count
+        rough_text_width = self._calc_rough_text_width(name, scaling_factor)
+
+        min_width = rough_text_width + bar_text_margin
+        put_text_right = value < min_width
 
         name_text_x = value if put_text_right else value - bar_text_margin
         name_text_ha = "left" if put_text_right else "right"
@@ -159,7 +173,7 @@ class TopNBarPlot(AnimatedPlot):
         )
 
         value_text_x = (
-            name_text_x + bar_text_margin + (len(name) * 12) * scaling_factor
+            name_text_x + min_width + bar_text_margin * 2
             if put_text_right
             else value + bar_text_margin
         )
