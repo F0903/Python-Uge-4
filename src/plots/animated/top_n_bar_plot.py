@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Self
 import matplotlib
 import matplotlib.pyplot as plt
 from utils import generate_color_map_from_list
@@ -33,8 +33,13 @@ class TopNBarPlot(AnimatedPlot):
 
         self._total_records = 0
 
-    def set_title(self, title: str):
+    def set_title(self, title: str) -> Self:
         self._title = title
+        return self
+
+    def set_xticks_title(self, value: str) -> Self:
+        self._xticks_title = value
+        return self
 
     def _update_highest_count(self, new_highest: int):
         self._highest_count = new_highest
@@ -97,7 +102,7 @@ class TopNBarPlot(AnimatedPlot):
         axes.text(
             0,
             1.06,
-            "Hours played (thousands)",
+            self._xticks_title,
             transform=axes.transAxes,
             size=12,
             color=self.SECONDARY_COLOR,
