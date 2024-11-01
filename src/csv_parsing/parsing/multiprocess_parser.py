@@ -1,8 +1,9 @@
 from collections.abc import Generator, Iterable
 from typing import TextIO
 from itertools import batched
-import multiprocess as mp
-import os
+import concurrent.futures as fut
+from csv_parsing.bad_line_mode import BadLineMode
+from csv_parsing.parsing.csv_header import CsvHeader
 from .base_parser import BaseCsvParser, CsvRow
 from .parser import CsvParser
 
@@ -26,7 +27,7 @@ class MultiProcessCsvParser(BaseCsvParser):
         bad_line_mode,
         print_error_to,
         allow_multiline_strings=False,
-        chunk_size=2000,
+        chunk_size=20000,
     ):
         self._lines = lines
         self._bad_line_mode = bad_line_mode
@@ -34,15 +35,22 @@ class MultiProcessCsvParser(BaseCsvParser):
         self._allow_multiline_strings = allow_multiline_strings
         self._chunk_size = chunk_size
 
-    def _parse_chunk(self, chunk_lines: tuple[str]) -> RowChunk:
+    @staticmethod
+    def _parse_chunk(
+        header: CsvHeader,
+        bad_line_mode: BadLineMode,
+        print_error_to,
+        allow_multiline_strings: bool,
+        chunk_lines: tuple[str],
+    ) -> RowChunk:
         # We have to wrap it in an iter, otherwise next() wont work
         line_iter = iter(chunk_lines)
         parser: CsvParser = CsvParser.from_header(
-            self._header,
+            header,
             line_iter,
-            self._bad_line_mode,
-            self._print_error_to,
-            self._allow_multiline_strings,
+            bad_line_mode,
+            print_error_to,
+            allow_multiline_strings,
         )
 
         chunk = RowChunk()
@@ -51,15 +59,24 @@ class MultiProcessCsvParser(BaseCsvParser):
         return chunk
 
     def _parse_chunks(self) -> Generator[RowChunk]:
-        cpus = os.cpu_count()
         chunks = batched(self._lines, self._chunk_size)
+        with fut.ProcessPoolExecutor() as pool:
+            futures: list[fut.Future] = []
+            for chunk in chunks:
+                future = pool.submit(
+                    MultiProcessCsvParser._parse_chunk,
+                    self._header,
+                    self._bad_line_mode,
+                    self._print_error_to,
+                    self._allow_multiline_strings,
+                    chunk,
+                )
+                futures.append(future)
+            for future in futures:
+                if future.done():
+                    yield future.result()
 
-        with mp.Pool(cpus) as pool:
-
-            for val in pool.map(self._parse_chunk, chunks):
-                yield val
-
-    # NOTE: THIS DOES NOT WORK AS EXPECTED, WILL ONLY RETURN VALUES WHEN THE WHOLE FILE HAS BEEN PARSED
+    # NOTE: For the vast majority of cases the normal CsvParser is better suited
     def parse(self) -> Generator[CsvRow]:
         # This is a little hacky, but we construct the first parser here,
         # then since the constructor parses the header, we get the header
