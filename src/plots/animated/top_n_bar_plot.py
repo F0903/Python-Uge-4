@@ -16,7 +16,7 @@ class TopNBarPlot(AnimatedPlot):
         top_n: int = 20,
         **figkw,
     ) -> None:
-        super().__init__(data, **figkw)
+        super().__init__(data, blit=True, **figkw)
 
         self.SECONDARY_COLOR = "#666666"
         self.X_LIMIT_MARGIN_PERCENT = 0.1
@@ -87,45 +87,12 @@ class TopNBarPlot(AnimatedPlot):
             edgecolor="black",
         )
 
-        # Title
-        axes.text(
-            0,
-            1.1,
-            self._title,
-            transform=axes.transAxes,
-            size=24,
-            weight=600,
-            ha="left",
-        )
-
-        # Below title
-        axes.text(
-            0,
-            1.06,
-            self._xticks_title,
-            transform=axes.transAxes,
-            size=12,
-            color=self.SECONDARY_COLOR,
-        )
-
         axes.set_frame_on(False)
         axes.set_yticks([])
 
         axes.xaxis.set_ticks_position("top")
         axes.tick_params(axis="x", colors=self.SECONDARY_COLOR, labelsize=12)
         axes.xaxis.set_major_formatter("{x:,.0f}h")
-
-        # Bottom text
-        axes.text(
-            0.5,
-            -0.05,
-            f"Total records: {self._total_records}",
-            transform=axes.transAxes,
-            size=18,
-            weight=500,
-            ha="center",
-            va="bottom",
-        )
 
         # Adjust size of plot
         plt.subplots_adjust(left=0.05, right=0.95, top=0.85, bottom=0.1)
@@ -150,6 +117,33 @@ class TopNBarPlot(AnimatedPlot):
             total += ASCII_VALUE if char.isascii() else NON_ASCII_VALUE
 
         return total * factor
+
+    # Draw all static elements
+    def _draw_static(self):
+        axes = self._axes
+
+        # Title
+        title = axes.text(
+            0,
+            1.1,
+            self._title,
+            transform=axes.transAxes,
+            size=24,
+            weight=600,
+            ha="left",
+        )
+
+        # Below title
+        below_title = axes.text(
+            0,
+            1.06,
+            self._xticks_title,
+            transform=axes.transAxes,
+            size=12,
+            color=self.SECONDARY_COLOR,
+        )
+
+        return [title, below_title]
 
     def _render_bar_text(self, bar_index: int):
         name, value = self._get_key_value_at_index(bar_index)
@@ -195,12 +189,11 @@ class TopNBarPlot(AnimatedPlot):
 
     # Helpful article
     # https://medium.com/@qiaofengmarco/animate-your-data-visualization-with-matplotlib-animation-3e3c69679c90
-    def _update(self, data_point: dict[str, str]):
-        # Clear the frame so we can draw from scratch
-        self._axes.clear()
-
+    def _draw_dynamic(self, data_point: dict[str, str]):
         self._update_item(data_point)
         bars = self._create_bar_plot()
 
         for bar_index, _ in enumerate(bars):
             self._render_bar_text(bar_index)
+
+        return bars.patches
