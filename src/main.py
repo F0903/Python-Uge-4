@@ -5,12 +5,21 @@ from plots import Plot
 from plots.animated import TopNBarPlot
 import matplotlib
 import signal
+import sys
 
 if __name__ == "__main__":
     # Make matplotlib figure close on CTRL+C in terminal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    file = open("./data/weighted_score_above_08.csv", encoding="utf-8")
+    args = sys.argv
+    if len(args) < 2:
+        raise Exception("You need to specify a file to parse!")
+
+    file_path = args[1]
+
+    # NOTE: all_reviews.csv is huge and starts with several thousand lines of the same game.
+    # I recommend reading the weighted_score_above_08.csv file
+    file = open(file_path, encoding="utf-8")
 
     parser = CsvParser(
         file,

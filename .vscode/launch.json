@@ -5,10 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Main",
+            "name": "Python Debugger: Debug with weighted score dataset.",
             "type": "debugpy",
             "request": "launch",
             "program": "src/main.py",
+            "args": ["data/weighted_score_above_08.csv"],
             "console": "integratedTerminal"
         }
     ]
